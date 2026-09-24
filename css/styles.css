@@ -617,6 +617,25 @@ h1, h2, h3, h4, h5, h6 {
 .reg__card {
     max-height: calc(100vh - var(--header-height) - var(--space-3xl));
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(201, 169, 110, 0.3) transparent;
+}
+
+.reg__card::-webkit-scrollbar {
+    width: 6px;
+}
+
+.reg__card::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.reg__card::-webkit-scrollbar-thumb {
+    background: rgba(201, 169, 110, 0.3);
+    border-radius: 3px;
+}
+
+.reg__card::-webkit-scrollbar-thumb:hover {
+    background: rgba(201, 169, 110, 0.5);
 }
 
 .auth__header-logo {

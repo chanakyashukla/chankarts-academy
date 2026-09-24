@@ -52,6 +52,7 @@
             '/academy/forgot-password': 'forgot-password',
             '/academy/admin': 'admin',
             '/academy/admin/': 'admin',
+            '/academy/registration-success': 'registration-success',
         },
         defaultRoute: '/academy/'
     };
@@ -1018,9 +1019,125 @@
         
         saveCurrentStepData();
         
-        // Mock registration - in production this would call /api/v1/auth/register
-        console.log('Registration data:', registrationState.data);
-        alert('Registration functionality will be connected to the backend in a future phase.\n\nSelected programmes: ' + registrationState.data.selectedProgrammes.map(p => p.name).join(', '));
+        // Disable submit button to prevent double submission
+        const submitBtn = document.getElementById('regNext');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+        }
+        
+        // Submit to backend
+        const payload = {
+            fullName: registrationState.data.fullName,
+            email: registrationState.data.email,
+            mobile: registrationState.data.mobile,
+            password: registrationState.data.password,
+            dateOfBirth: registrationState.data.dateOfBirth,
+            isMinor: registrationState.data.isMinor,
+            address: registrationState.data.address || null,
+            guardianName: registrationState.data.isMinor ? registrationState.data.guardianName : null,
+            guardianRelationship: registrationState.data.isMinor ? registrationState.data.guardianRelationship : null,
+            guardianEmail: registrationState.data.isMinor ? registrationState.data.guardianEmail : null,
+            guardianMobile: registrationState.data.isMinor ? registrationState.data.guardianMobile : null,
+            selectedProgrammes: registrationState.data.selectedProgrammes,
+        };
+        
+        fetch('/api/v1/registration/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(data => {
+                    throw new Error(data.detail || 'Registration failed');
+                });
+            }
+            return res.json();
+        })
+        .then(data => {
+            // Show success screen
+            showRegistrationSuccess(data);
+        })
+        .catch(err => {
+            console.error('Registration error:', err);
+            alert('Registration failed: ' + err.message);
+            
+            // Re-enable submit button
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Academy Account';
+            }
+        });
+    }
+
+    function showRegistrationSuccess(data) {
+        const main = document.getElementById('mainContent');
+        main.innerHTML = `
+            <section class="auth">
+                <div class="auth__bg"></div>
+                <div class="auth__container" style="max-width: 560px;">
+                    <div class="auth__card">
+                        <div style="text-align: center; margin-bottom: 32px;">
+                            <div style="width: 80px; height: 80px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; color: #4ade80;">✓</div>
+                            <h1 style="font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 8px; color: var(--color-text-primary);">Registration Submitted Successfully</h1>
+                            <p style="color: var(--color-text-secondary); font-size: 0.95rem;">Thank you for registering with ChankArts Music Academy</p>
+                        </div>
+                        
+                        <div style="background: var(--color-bg-secondary); border-radius: var(--radius-md); padding: 24px; margin-bottom: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                <span style="color: var(--color-text-muted); font-size: 0.85rem;">Application ID</span>
+                                <span style="font-weight: 600; color: var(--color-accent);">${data.request_id}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                <span style="color: var(--color-text-muted); font-size: 0.85rem;">Submitted</span>
+                                <span style="font-weight: 500;">${new Date(data.submitted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                <span style="color: var(--color-text-muted); font-size: 0.85rem;">Status</span>
+                                <span class="badge badge--pending">Pending Approval</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                                <span style="color: var(--color-text-muted); font-size: 0.85rem;">Expected Review</span>
+                                <span style="font-weight: 500;">Within 72 hours</span>
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(201, 169, 110, 0.08); border-left: 3px solid var(--color-accent); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 16px; margin-bottom: 24px;">
+                            <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0;">
+                                Your application has been successfully received and is now under review. We will contact you once your registration has been reviewed.
+                            </p>
+                        </div>
+                        
+                        <p style="color: var(--color-text-muted); font-size: 0.85rem; text-align: center; margin-bottom: 24px;">
+                            A confirmation email has been sent to <strong style="color: var(--color-text-primary);">${registrationState.data.email}</strong>
+                        </p>
+                        
+                        <div style="text-align: center;">
+                            <a href="/academy/" class="btn btn--primary" data-route="home">Return to Home</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        `;
+        
+        // Reset registration state
+        registrationState.currentStep = 1;
+        registrationState.data = {
+            fullName: '',
+            email: '',
+            mobile: '',
+            password: '',
+            confirmPassword: '',
+            dateOfBirth: '',
+            isMinor: false,
+            address: '',
+            guardianName: '',
+            guardianRelationship: '',
+            guardianEmail: '',
+            guardianMobile: '',
+            selectedProgrammes: [],
+        };
     }
 
     function updateProgressUI() {
