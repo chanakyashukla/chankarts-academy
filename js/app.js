@@ -1042,7 +1042,7 @@
             selectedProgrammes: registrationState.data.selectedProgrammes,
         };
         
-        fetch('/api/v1/registration/register', {
+        fetch('/api/v1/registration-requests', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -1086,6 +1086,10 @@
                         
                         <div style="background: var(--color-bg-secondary); border-radius: var(--radius-md); padding: 24px; margin-bottom: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                                <span style="color: var(--color-text-muted); font-size: 0.85rem;">Applicant Name</span>
+                                <span style="font-weight: 500;">${registrationState.data.fullName}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
                                 <span style="color: var(--color-text-muted); font-size: 0.85rem;">Application ID</span>
                                 <span style="font-weight: 600; color: var(--color-accent);">${data.request_id}</span>
                             </div>
@@ -1110,7 +1114,7 @@
                         </div>
                         
                         <p style="color: var(--color-text-muted); font-size: 0.85rem; text-align: center; margin-bottom: 24px;">
-                            A confirmation email has been sent to <strong style="color: var(--color-text-primary);">${registrationState.data.email}</strong>
+                            A confirmation will be sent to <strong style="color: var(--color-text-primary);">${registrationState.data.email}</strong>
                         </p>
                         
                         <div style="text-align: center;">

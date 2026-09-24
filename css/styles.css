@@ -608,34 +608,17 @@ h1, h2, h3, h4, h5, h6 {
 .reg {
     align-items: flex-start;
     padding-top: calc(var(--header-height) + var(--space-2xl));
+    padding-bottom: var(--space-3xl);
+    min-height: calc(100vh - var(--header-height));
 }
 
 .reg__container {
     max-width: 560px;
+    width: 100%;
 }
 
 .reg__card {
-    max-height: calc(100vh - var(--header-height) - var(--space-3xl));
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(201, 169, 110, 0.3) transparent;
-}
-
-.reg__card::-webkit-scrollbar {
-    width: 6px;
-}
-
-.reg__card::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.reg__card::-webkit-scrollbar-thumb {
-    background: rgba(201, 169, 110, 0.3);
-    border-radius: 3px;
-}
-
-.reg__card::-webkit-scrollbar-thumb:hover {
-    background: rgba(201, 169, 110, 0.5);
+    padding: var(--space-2xl);
 }
 
 .auth__header-logo {
@@ -650,7 +633,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Progress Steps */
 .reg__progress {
-    margin-bottom: var(--space-2xl);
+    margin-bottom: var(--space-xl);
 }
 
 .reg__progress-steps {
@@ -668,15 +651,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .reg__progress-number {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: var(--color-bg-secondary);
     border: 2px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--color-text-muted);
     transition: all var(--transition-fast);
@@ -695,7 +678,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .reg__progress-label {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -866,6 +849,12 @@ h1, h2, h3, h4, h5, h6 {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: var(--space-sm);
+}
+
+@media (max-width: 480px) {
+    .reg__category-programmes {
+        grid-template-columns: 1fr;
+    }
 }
 
 .reg__programme {
