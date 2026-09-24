@@ -49,7 +49,9 @@
             '/academy/': 'home',
             '/academy/login': 'login',
             '/academy/register': 'register',
-            '/academy/forgot-password': 'forgot-password'
+            '/academy/forgot-password': 'forgot-password',
+            '/academy/admin': 'admin',
+            '/academy/admin/': 'admin',
         },
         defaultRoute: '/academy/'
     };
@@ -706,6 +708,32 @@
             }, 0);
             
             return div;
+        },
+
+        admin() {
+            // Check authentication
+            const token = localStorage.getItem('academy_token');
+            const user = JSON.parse(localStorage.getItem('academy_user') || '{}');
+            
+            if (!token || user.role !== 'admin') {
+                // Redirect to login
+                window.location.href = '/academy/login';
+                return document.createElement('div');
+            }
+            
+            const div = document.createElement('div');
+            div.className = 'page admin-page';
+            div.innerHTML = `
+                <div class="admin-layout" id="adminLayout"></div>
+            `;
+            
+            setTimeout(() => {
+                if (typeof Admin !== 'undefined') {
+                    Admin.init();
+                }
+            }, 0);
+            
+            return div;
         }
     };
 
@@ -1041,8 +1069,42 @@
         }
         
         if (isValid) {
-            console.log('Login attempt:', { email });
-            alert('Login functionality will be connected to the backend in a future phase.');
+            // Try to connect to backend
+            fetch('/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Login failed');
+                return res.json();
+            })
+            .then(data => {
+                // Store token and user info
+                localStorage.setItem('academy_token', data.access_token);
+                localStorage.setItem('academy_user', JSON.stringify({
+                    role: data.role,
+                    user_id: data.user_id,
+                }));
+                
+                // Route based on role
+                switch (data.role) {
+                    case 'admin':
+                        Router.navigate('/academy/admin');
+                        break;
+                    case 'instructor':
+                        // TODO: instructor dashboard
+                        alert('Instructor dashboard coming soon');
+                        break;
+                    default:
+                        // TODO: student dashboard
+                        alert('Student dashboard coming soon');
+                }
+            })
+            .catch(err => {
+                console.error('Login error:', err);
+                alert('Login failed. Please check your credentials and try again.');
+            });
         }
     }
 
