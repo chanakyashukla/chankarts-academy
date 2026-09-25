@@ -53,6 +53,7 @@
             '/academy/admin': 'admin',
             '/academy/admin/': 'admin',
             '/academy/registration-success': 'registration-success',
+            '/academy/verify-email': 'verify-email',
         },
         defaultRoute: '/academy/'
     };
@@ -63,6 +64,7 @@
     const registrationState = {
         currentStep: 1,
         totalSteps: 4,
+        submitting: false,
         data: {
             // Step 1: Account
             fullName: '',
@@ -735,6 +737,112 @@
             }, 0);
             
             return div;
+        },
+
+        'verify-email'() {
+            const div = document.createElement('div');
+            div.className = 'page';
+            
+            // Get token from URL query params
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const email = urlParams.get('email');
+            
+            if (!token && !email) {
+                // No token or email provided - show request form
+                div.innerHTML = `
+                    <section class="auth">
+                        <div class="auth__bg"></div>
+                        <div class="auth__container" style="max-width: 480px;">
+                            <div class="auth__card">
+                                <div class="auth__header">
+                                    <img src="assets/ChankArts Music Academy.png" alt="ChankArts Music Academy" class="auth__header-logo">
+                                    <h1 class="auth__title">Verify Your Email</h1>
+                                    <p class="auth__subtitle">Enter your email to receive a verification link</p>
+                                </div>
+                                <form class="auth__form" id="verifyRequestForm">
+                                    <div class="auth__field">
+                                        <label class="auth__label" for="verifyEmail">Email Address</label>
+                                        <input 
+                                            type="email" 
+                                            id="verifyEmail" 
+                                            class="auth__input" 
+                                            placeholder="you@example.com"
+                                            autocomplete="email"
+                                            required
+                                        >
+                                        <span class="auth__error" id="verifyEmailError">Please enter a valid email</span>
+                                    </div>
+                                    <button type="submit" class="btn btn--primary btn--full btn--large">Send Verification Link</button>
+                                </form>
+                                <div class="auth__footer">
+                                    <a href="/academy/login" class="auth__footer-link" data-route="login">Back to Login</a>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                `;
+                
+                setTimeout(() => {
+                    const form = div.querySelector('#verifyRequestForm');
+                    if (form) form.addEventListener('submit', handleVerifyRequest);
+                }, 0);
+                
+                return div;
+            }
+            
+            if (token) {
+                // Token provided - verify the email
+                div.innerHTML = `
+                    <section class="auth">
+                        <div class="auth__bg"></div>
+                        <div class="auth__container" style="max-width: 480px;">
+                            <div class="auth__card">
+                                <div style="text-align: center; padding: 40px 20px;">
+                                    <div style="width: 64px; height: 64px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                        <span style="font-size: 28px; color: var(--color-success);">⟳</span>
+                                    </div>
+                                    <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin: 0 0 12px; color: var(--color-text-primary);">Verifying Your Email...</h2>
+                                    <p style="color: var(--color-text-secondary); font-size: 0.9rem;">Please wait while we verify your email address.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                `;
+                
+                setTimeout(() => {
+                    verifyEmailToken(token);
+                }, 100);
+                
+                return div;
+            }
+            
+            // Email provided but no token - show message to check inbox
+            div.innerHTML = `
+                <section class="auth">
+                    <div class="auth__bg"></div>
+                    <div class="auth__container" style="max-width: 480px;">
+                        <div class="auth__card">
+                            <div style="text-align: center; padding: 40px 20px;">
+                                <div style="width: 64px; height: 64px; background: rgba(201, 169, 110, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                    <span style="font-size: 28px; color: var(--color-accent);">✉</span>
+                                </div>
+                                <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin: 0 0 12px; color: var(--color-text-primary);">Check Your Inbox</h2>
+                                <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0 0 24px;">
+                                    We've sent a verification link to<br>
+                                    <strong style="color: var(--color-text-primary);">${escapeHtml(email)}</strong>
+                                </p>
+                                <p style="color: var(--color-text-muted); font-size: 0.85rem; margin: 0 0 24px;">
+                                    Click the link in the email to verify your address. The link expires in 24 hours.
+                                </p>
+                                <a href="/academy/login" class="btn btn--primary" data-route="login" style="width: 100%; text-align: center;">Go to Login</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+            
+            return div;
         }
     };
 
@@ -795,6 +903,9 @@
             registrationState.currentStep++;
             renderCurrentStep();
             updateProgressUI();
+        } else if (registrationState.currentStep === registrationState.totalSteps) {
+            // On last step - submit the form
+            handleSubmit();
         }
     }
 
@@ -934,6 +1045,7 @@
         clearAllErrors();
         const step = registrationState.currentStep;
         let isValid = true;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         
         if (step === 1) {
             const fullName = document.getElementById('regFullName')?.value.trim();
@@ -947,7 +1059,6 @@
                 isValid = false;
             }
             
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!email || !emailRegex.test(email)) {
                 showError('regEmailError');
                 isValid = false;
@@ -1013,17 +1124,23 @@
     }
 
     function handleSubmit(e) {
-        e.preventDefault();
+        if (e) e.preventDefault();
         
         if (!validateCurrentStep()) return;
         
         saveCurrentStepData();
         
+        // Prevent duplicate submissions
+        if (registrationState.submitting) return;
+        registrationState.submitting = true;
+        
         // Disable submit button to prevent double submission
         const submitBtn = document.getElementById('regNext');
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
+            submitBtn.textContent = 'Creating Your Academy Account...';
+            submitBtn.style.opacity = '0.7';
+            submitBtn.style.cursor = 'wait';
         }
         
         // Submit to backend
@@ -1051,24 +1168,59 @@
             if (!res.ok) {
                 return res.json().then(data => {
                     throw new Error(data.detail || 'Registration failed');
+                }).catch(parseErr => {
+                    if (parseErr.message && parseErr.message !== 'Registration failed') throw parseErr;
+                    throw new Error('Registration failed. Please try again.');
                 });
             }
             return res.json();
         })
         .then(data => {
-            // Show success screen
+            registrationState.submitting = false;
             showRegistrationSuccess(data);
         })
         .catch(err => {
             console.error('Registration error:', err);
-            alert('Registration failed: ' + err.message);
+            registrationState.submitting = false;
             
             // Re-enable submit button
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create Academy Account';
+                submitBtn.style.opacity = '';
+                submitBtn.style.cursor = '';
             }
+            
+            // Show user-friendly error message
+            showRegistrationError(err.message);
         });
+    }
+
+    function showRegistrationError(message) {
+        const main = document.getElementById('mainContent');
+        const existingError = main.querySelector('.reg-error-overlay');
+        if (existingError) existingError.remove();
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'reg-error-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,15,23,0.9);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+        
+        overlay.innerHTML = `
+            <div style="background:var(--color-bg-secondary);border-radius:var(--radius-lg);padding:40px;max-width:480px;width:100%;text-align:center;border:1px solid rgba(248,113,113,0.3);">
+                <div style="width:64px;height:64px;background:rgba(248,113,113,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;color:var(--color-error);">✕</div>
+                <h2 style="font-family:var(--font-display);font-size:1.25rem;margin:0 0 12px;color:var(--color-text-primary);">Registration Issue</h2>
+                <p style="color:var(--color-text-secondary);font-size:0.9rem;line-height:1.6;margin:0 0 24px;">${escapeHtml(message)}</p>
+                <button onclick="this.closest('.reg-error-overlay').remove()" style="background:var(--color-accent);color:#0f0f17;border:none;padding:12px 32px;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:0.95rem;">Try Again</button>
+            </div>
+        `;
+        
+        main.appendChild(overlay);
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     function showRegistrationSuccess(data) {
@@ -1080,15 +1232,11 @@
                     <div class="auth__card">
                         <div style="text-align: center; margin-bottom: 32px;">
                             <div style="width: 80px; height: 80px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; color: #4ade80;">✓</div>
-                            <h1 style="font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 8px; color: var(--color-text-primary);">Registration Submitted Successfully</h1>
-                            <p style="color: var(--color-text-secondary); font-size: 0.95rem;">Thank you for registering with ChankArts Music Academy</p>
+                            <h1 style="font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 8px; color: var(--color-text-primary);">Academy Account Created</h1>
+                            <p style="color: var(--color-text-secondary); font-size: 0.95rem;">Welcome to ChankArts Music Academy, <strong style="color: var(--color-text-primary);">${escapeHtml(registrationState.data.fullName)}</strong></p>
                         </div>
                         
                         <div style="background: var(--color-bg-secondary); border-radius: var(--radius-md); padding: 24px; margin-bottom: 24px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-                                <span style="color: var(--color-text-muted); font-size: 0.85rem;">Applicant Name</span>
-                                <span style="font-weight: 500;">${registrationState.data.fullName}</span>
-                            </div>
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
                                 <span style="color: var(--color-text-muted); font-size: 0.85rem;">Application ID</span>
                                 <span style="font-weight: 600; color: var(--color-accent);">${data.request_id}</span>
@@ -1109,16 +1257,27 @@
                         
                         <div style="background: rgba(201, 169, 110, 0.08); border-left: 3px solid var(--color-accent); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 16px; margin-bottom: 24px;">
                             <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0;">
-                                Your application has been successfully received and is now under review. We will contact you once your registration has been reviewed.
+                                Your registration has been successfully submitted. Our Academy team will review your application within 72 hours.
+                            </p>
+                        </div>
+                        
+                        <div style="background: rgba(74, 222, 128, 0.08); border-left: 3px solid var(--color-success); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 16px; margin-bottom: 24px;">
+                            <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0;">
+                                We've sent a verification email to <strong style="color: var(--color-text-primary);">${escapeHtml(registrationState.data.email)}</strong>. Please check your inbox and verify your email address.
                             </p>
                         </div>
                         
                         <p style="color: var(--color-text-muted); font-size: 0.85rem; text-align: center; margin-bottom: 24px;">
-                            A confirmation will be sent to <strong style="color: var(--color-text-primary);">${registrationState.data.email}</strong>
+                            You do not need to submit the registration form again.
                         </p>
                         
-                        <div style="text-align: center;">
-                            <a href="/academy/" class="btn btn--primary" data-route="home">Return to Home</a>
+                        <div style="text-align: center; display: flex; flex-direction: column; gap: 12px;">
+                            <a href="/academy/verify-email?email=${encodeURIComponent(registrationState.data.email)}" class="btn btn--primary" data-route="verify-email" style="width: 100%; text-align: center;">
+                                Verify Email
+                            </a>
+                            <a href="/academy/login" class="btn btn--secondary" data-route="login" style="width: 100%; text-align: center;">
+                                Go to Academy Login
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1127,6 +1286,7 @@
         
         // Reset registration state
         registrationState.currentStep = 1;
+        registrationState.submitting = false;
         registrationState.data = {
             fullName: '',
             email: '',
@@ -1242,6 +1402,129 @@
             console.log('Forgot password attempt:', { email });
             alert('Password reset functionality will be connected to the backend in a future phase.');
         }
+    }
+
+    function handleVerifyRequest(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('verifyEmail').value.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!email || !emailRegex.test(email)) {
+            showError('verifyEmailError');
+            return;
+        }
+        
+        hideError('verifyEmailError');
+        
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+        }
+        
+        fetch('/api/v1/verify-email/request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Failed to send verification email');
+            return res.json();
+        })
+        .then(data => {
+            // Show confirmation that email was sent
+            const main = document.getElementById('mainContent');
+            main.innerHTML = `
+                <section class="auth">
+                    <div class="auth__bg"></div>
+                    <div class="auth__container" style="max-width: 480px;">
+                        <div class="auth__card">
+                            <div style="text-align: center; padding: 40px 20px;">
+                                <div style="width: 64px; height: 64px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                    <span style="font-size: 28px; color: var(--color-success);">✓</span>
+                                </div>
+                                <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin: 0 0 12px; color: var(--color-text-primary);">Email Sent</h2>
+                                <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0 0 24px;">
+                                    We've sent a verification link to<br>
+                                    <strong style="color: var(--color-text-primary);">${escapeHtml(email)}</strong>
+                                </p>
+                                <p style="color: var(--color-text-muted); font-size: 0.85rem; margin: 0 0 24px;">
+                                    Click the link in the email to verify your address. The link expires in 24 hours.
+                                </p>
+                                <a href="/academy/login" class="btn btn--primary" data-route="login" style="width: 100%; text-align: center;">Go to Login</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+        })
+        .catch(err => {
+            console.error('Verification request error:', err);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Verification Link';
+            }
+            alert('Failed to send verification email. Please try again.');
+        });
+    }
+
+    function verifyEmailToken(token) {
+        fetch('/api/v1/verify-email/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Verification failed');
+            return res.json();
+        })
+        .then(data => {
+            // Show success
+            const main = document.getElementById('mainContent');
+            main.innerHTML = `
+                <section class="auth">
+                    <div class="auth__bg"></div>
+                    <div class="auth__container" style="max-width: 480px;">
+                        <div class="auth__card">
+                            <div style="text-align: center; padding: 40px 20px;">
+                                <div style="width: 64px; height: 64px; background: rgba(74, 222, 128, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                    <span style="font-size: 28px; color: var(--color-success);">✓</span>
+                                </div>
+                                <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin: 0 0 12px; color: var(--color-text-primary);">Email Verified</h2>
+                                <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0 0 24px;">
+                                    Your email address has been successfully verified. Your registration is now pending Academy approval.
+                                </p>
+                                <a href="/academy/login" class="btn btn--primary" data-route="login" style="width: 100%; text-align: center;">Go to Login</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+        })
+        .catch(err => {
+            console.error('Verification error:', err);
+            const main = document.getElementById('mainContent');
+            main.innerHTML = `
+                <section class="auth">
+                    <div class="auth__bg"></div>
+                    <div class="auth__container" style="max-width: 480px;">
+                        <div class="auth__card">
+                            <div style="text-align: center; padding: 40px 20px;">
+                                <div style="width: 64px; height: 64px; background: rgba(248, 113, 113, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                    <span style="font-size: 28px; color: var(--color-error);">✕</span>
+                                </div>
+                                <h2 style="font-family: var(--font-display); font-size: 1.25rem; margin: 0 0 12px; color: var(--color-text-primary);">Verification Failed</h2>
+                                <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0 0 24px;">
+                                    The verification link is invalid or has expired. Please request a new one.
+                                </p>
+                                <a href="/academy/verify-email" class="btn btn--primary" data-route="verify-email" style="width: 100%; text-align: center;">Request New Link</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
     }
 
     // ========================================
