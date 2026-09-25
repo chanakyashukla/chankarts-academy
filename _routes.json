@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [],
+  "rules": [
+    {
+      "pattern": "/api/*",
+      "route": "https://<BACKEND_URL>/api/*"
+    }
+  ]
+}

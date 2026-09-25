@@ -44,7 +44,12 @@
     // ========================================
     // Configuration
     // ========================================
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8000'
+        : '';  // Production: same origin (Cloudflare routes /api/* to backend)
+    
     const CONFIG = {
+        apiBase: API_BASE,
         routes: {
             '/academy/': 'home',
             '/academy/login': 'login',
@@ -1159,7 +1164,7 @@
             selectedProgrammes: registrationState.data.selectedProgrammes,
         };
         
-        fetch('/api/v1/registration-requests', {
+        fetch(CONFIG.apiBase + '/api/v1/registration-requests', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -1351,7 +1356,7 @@
         
         if (isValid) {
             // Try to connect to backend
-            fetch('/api/v1/auth/login', {
+            fetch(CONFIG.apiBase + '/api/v1/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -1423,7 +1428,7 @@
             submitBtn.textContent = 'Sending...';
         }
         
-        fetch('/api/v1/verify-email/request', {
+            fetch(CONFIG.apiBase + '/api/v1/verify-email/request', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email }),
@@ -1470,7 +1475,7 @@
     }
 
     function verifyEmailToken(token) {
-        fetch('/api/v1/verify-email/confirm', {
+            fetch(CONFIG.apiBase + '/api/v1/verify-email/confirm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token }),
