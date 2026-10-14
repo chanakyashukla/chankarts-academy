@@ -59,6 +59,19 @@
             '/academy/admin/': 'admin',
             '/academy/registration-success': 'registration-success',
             '/academy/verify-email': 'verify-email',
+            '/academy/portal': 'portal',
+            '/academy/portal/': 'portal',
+            '/academy/portal/dashboard': 'portal',
+            '/academy/portal/classes': 'portal',
+            '/academy/portal/billing': 'portal',
+            '/academy/portal/assignments': 'portal',
+            '/academy/portal/materials': 'portal',
+            '/academy/portal/reports': 'portal',
+            '/academy/portal/syllabus': 'portal',
+            '/academy/portal/exams': 'portal',
+            '/academy/portal/resources': 'portal',
+            '/academy/portal/profile': 'portal',
+            '/academy/portal/help': 'portal',
         },
         defaultRoute: '/academy/'
     };
@@ -136,6 +149,8 @@
         render(page) {
             const main = document.getElementById('mainContent');
             main.innerHTML = '';
+            document.body.classList.toggle('body--portal', page === 'portal');
+            document.body.classList.toggle('body--admin', page === 'admin');
             
             const content = Pages[page]();
             if (content) {
@@ -741,6 +756,28 @@
                 }
             }, 0);
             
+            return div;
+        },
+
+        portal() {
+            const token = localStorage.getItem('academy_token');
+            const user = JSON.parse(localStorage.getItem('academy_user') || '{}');
+
+            if (!token || ['student', 'parent', 'instructor'].indexOf(user.role) < 0) {
+                window.location.href = '/academy/login';
+                return document.createElement('div');
+            }
+
+            const div = document.createElement('div');
+            div.className = 'page portal-page';
+            div.innerHTML = '<div id="portalRoot"></div>';
+
+            setTimeout(() => {
+                if (typeof Portal !== 'undefined') {
+                    Portal.init();
+                }
+            }, 0);
+
             return div;
         },
 
@@ -1371,7 +1408,11 @@
                 localStorage.setItem('academy_user', JSON.stringify({
                     role: data.role,
                     user_id: data.user_id,
+                    name: data.name || '',
+                    email: data.email || data.username || '',
                 }));
+
+                syncAuthNav();
                 
                 // Route based on role
                 switch (data.role) {
@@ -1379,12 +1420,13 @@
                         Router.navigate('/academy/admin');
                         break;
                     case 'instructor':
-                        // TODO: instructor dashboard
-                        alert('Instructor dashboard coming soon');
+                        Router.navigate('/academy/portal');
+                        break;
+                    case 'parent':
+                        Router.navigate('/academy/portal');
                         break;
                     default:
-                        // TODO: student dashboard
-                        alert('Student dashboard coming soon');
+                        Router.navigate('/academy/portal');
                 }
             })
             .catch(err => {
@@ -1535,12 +1577,86 @@
     // ========================================
     // Header
     // ========================================
+    // ========================================
+    // Auth-aware header
+    // ========================================
+    function syncAuthNav() {
+        const nav = document.getElementById('mainNav');
+        const mobileNav = document.querySelector('#mobileMenu .mobile-menu__nav');
+
+        const token = localStorage.getItem('academy_token');
+        let user = {};
+        try { user = JSON.parse(localStorage.getItem('academy_user') || '{}'); } catch (e) { user = {}; }
+
+        // Remove any previously injected auth block
+        const existing = nav && nav.querySelector('.header__user');
+        if (existing) existing.remove();
+
+        const loginLink = nav && nav.querySelector('[data-route="login"]');
+        const registerLink = nav && nav.querySelector('[data-route="register"]');
+        const mLogin = mobileNav && mobileNav.querySelector('[data-route="login"]');
+        const mRegister = mobileNav && mobileNav.querySelector('[data-route="register"]');
+
+        if (token && user.role) {
+            // Logged in: hide Login/Register, show user chip + logout
+            [loginLink, registerLink, mLogin, mRegister].forEach(el => { if (el) el.style.display = 'none'; });
+
+            const displayName = user.name || (user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Account');
+            const initial = (user.name || user.role || 'A').charAt(0).toUpperCase();
+
+            if (nav) {
+                const authBlock = document.createElement('div');
+                authBlock.className = 'header__user';
+                authBlock.innerHTML = `
+                    <span class="header__user-chip">
+                        <span class="header__user-avatar">${initial}</span>
+                        <span>${displayName}</span>
+                    </span>
+                    <button type="button" class="header__logout" id="headerLogoutBtn">Log out</button>
+                `;
+                nav.appendChild(authBlock);
+
+                const logoutBtn = authBlock.querySelector('#headerLogoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', () => {
+                        localStorage.removeItem('academy_token');
+                        localStorage.removeItem('academy_user');
+                        syncAuthNav();
+                        Router.navigate('/academy/');
+                    });
+                }
+            }
+
+            if (mobileNav && !mobileNav.querySelector('.mobile-menu__logout')) {
+                const mLogout = document.createElement('a');
+                mLogout.href = '#';
+                mLogout.className = 'mobile-menu__link mobile-menu__logout';
+                mLogout.textContent = 'Log out';
+                mLogout.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    localStorage.removeItem('academy_token');
+                    localStorage.removeItem('academy_user');
+                    syncAuthNav();
+                    Router.navigate('/academy/');
+                });
+                mobileNav.appendChild(mLogout);
+            }
+        } else {
+            // Logged out: show Login
+            [loginLink, registerLink, mLogin, mRegister].forEach(el => { if (el) el.style.display = ''; });
+            const mLogout = mobileNav && mobileNav.querySelector('.mobile-menu__logout');
+            if (mLogout) mLogout.remove();
+        }
+    }
+
     const Header = {
         init() {
             const header = document.getElementById('header');
             const menuBtn = document.getElementById('menuBtn');
             const mobileMenu = document.getElementById('mobileMenu');
-            
+
+            syncAuthNav();
+
             window.addEventListener('scroll', () => {
                 header.classList.toggle('header--scrolled', window.scrollY > 20);
             });
