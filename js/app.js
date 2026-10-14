@@ -47,7 +47,35 @@
     const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:8000'
         : '';  // Production: same origin (Cloudflare routes /api/* to backend)
-    
+
+    // Base path: '/academy' in production, '/chankarts-academy' on GitHub Pages,
+    // '' when served at the domain root. Set by the inline script in index.html
+    // (before stylesheets); fall back to the same detection if absent.
+    const BASE_PATH = (function () {
+        if (typeof window.__APP_BASE === 'string') return window.__APP_BASE;
+        const segments = ['login', 'register', 'forgot-password', 'admin',
+            'registration-success', 'verify-email', 'portal'];
+        const seg = window.location.pathname.split('/')[1] || '';
+        return (!seg || segments.indexOf(seg) >= 0) ? '' : '/' + seg;
+    })();
+
+    // Canonical internal route keys always use the '/academy' prefix so that
+    // existing links, redirects and templates keep working. These two helpers
+    // translate between the canonical key and the real mounted URL.
+    function toCanonical(path) {
+        const rest = BASE_PATH && path.indexOf(BASE_PATH) === 0 ? path.slice(BASE_PATH.length) : path;
+        return '/academy' + (rest === '' ? '/' : rest);
+    }
+
+    function toReal(canonical) {
+        const rest = canonical.indexOf('/academy') === 0 ? canonical.slice('/academy'.length) : canonical;
+        return (BASE_PATH + (rest === '' ? '/' : rest)) || '/';
+    }
+
+    // Shared with admin.js / portal.js for hard redirects and pathname reads.
+    window.AppPath = toReal;
+    window.AppCanonical = toCanonical;
+
     const CONFIG = {
         apiBase: API_BASE,
         routes: {
@@ -120,23 +148,25 @@
         init() {
             window.addEventListener('popstate', () => this.handleRoute());
             document.addEventListener('click', (e) => {
-                const link = e.target.closest('a[data-route]');
-                if (link) {
-                    e.preventDefault();
-                    const route = link.getAttribute('href');
-                    this.navigate(route);
-                }
+                const link = e.target.closest('a');
+                if (!link) return;
+                const href = link.getAttribute('href') || '';
+                if (href.indexOf('/academy') !== 0) return;
+                // portal's own logo link has a dedicated handler (portal.go)
+                if (link.hasAttribute('data-portal-home')) return;
+                e.preventDefault();
+                this.navigate(href);
             });
             this.handleRoute();
         },
 
         navigate(route) {
-            window.history.pushState({}, '', route);
+            window.history.pushState({}, '', toReal(route));
             this.handleRoute();
         },
 
         handleRoute() {
-            const path = window.location.pathname;
+            const path = toCanonical(window.location.pathname);
             const page = CONFIG.routes[path] || 'home';
             
             if (state.currentRoute === page) return;
@@ -740,7 +770,7 @@
             
             if (!token || user.role !== 'admin') {
                 // Redirect to login
-                window.location.href = '/academy/login';
+                window.location.href = window.AppPath('/academy/login');
                 return document.createElement('div');
             }
             
@@ -764,7 +794,7 @@
             const user = JSON.parse(localStorage.getItem('academy_user') || '{}');
 
             if (!token || ['student', 'parent', 'instructor'].indexOf(user.role) < 0) {
-                window.location.href = '/academy/login';
+                window.location.href = window.AppPath('/academy/login');
                 return document.createElement('div');
             }
 

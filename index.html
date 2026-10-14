@@ -6,6 +6,23 @@
     <meta name="description" content="ChankArts Music Academy - Learn. Create. Perform. A professional music learning platform for students and instructors.">
     <meta name="theme-color" content="#1a1a2e">
     <title>ChankArts Music Academy</title>
+    <script>
+        /* Detect the mount point (base path) before any stylesheet loads so
+           relative css/js/asset URLs resolve correctly on every route,
+           including nested ones like /portal/dashboard. Works at
+           /academy (production), /chankarts-academy (GitHub Pages)
+           and / (root). */
+        (function () {
+            var segments = ['login', 'register', 'forgot-password', 'admin',
+                'registration-success', 'verify-email', 'portal'];
+            var seg = window.location.pathname.split('/')[1] || '';
+            var base = (!seg || segments.indexOf(seg) >= 0) ? '' : '/' + seg;
+            window.__APP_BASE = base;
+            var el = document.createElement('base');
+            el.setAttribute('href', (base || '') + '/');
+            document.head.insertBefore(el, document.head.firstChild);
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">

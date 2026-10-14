@@ -74,7 +74,7 @@ const Portal = (function () {
         if (response.status === 401) {
             localStorage.removeItem('academy_token');
             localStorage.removeItem('academy_user');
-            window.location.href = '/academy/login';
+            window.location.href = window.AppPath('/academy/login');
             throw new Error('Session expired');
         }
         if (!response.ok) {
@@ -221,15 +221,16 @@ const Portal = (function () {
     }
 
     function sectionFromPath() {
-        const match = window.location.pathname.match(/^\/academy\/portal\/?([^/?]*)/);
+        const canonical = window.AppCanonical(window.location.pathname);
+        const match = canonical.match(/^\/academy\/portal\/?([^/?]*)/);
         const section = match && match[1] ? match[1] : 'dashboard';
         return navItems().some(function (n) { return n.section === section; }) ? section : 'dashboard';
     }
 
     function go(section) {
         const path = '/academy/portal/' + section;
-        if (window.location.pathname !== path) {
-            window.history.pushState({}, '', path);
+        if (window.AppCanonical(window.location.pathname) !== path) {
+            window.history.pushState({}, '', window.AppPath(path));
         }
         state.section = section;
         state.sidebarOpen = false;
@@ -1237,7 +1238,7 @@ const Portal = (function () {
             logout.addEventListener('click', function () {
                 localStorage.removeItem('academy_token');
                 localStorage.removeItem('academy_user');
-                window.location.href = '/academy/login';
+                window.location.href = window.AppPath('/academy/login');
             });
         }
 
@@ -1822,7 +1823,7 @@ const Portal = (function () {
     async function init() {
         const stored = storedUser();
         if (!token() || ['student', 'parent', 'instructor'].indexOf(stored.role) < 0) {
-            window.location.href = '/academy/login';
+            window.location.href = window.AppPath('/academy/login');
             return;
         }
         state.role = stored.role;

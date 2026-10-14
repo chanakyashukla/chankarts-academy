@@ -91,7 +91,7 @@ const Admin = (function() {
             if (response.status === 401) {
                 localStorage.removeItem('academy_token');
                 localStorage.removeItem('academy_user');
-                window.location.href = '/academy/login';
+                window.location.href = window.AppPath('/academy/login');
                 return null;
             }
 
@@ -124,7 +124,7 @@ const Admin = (function() {
             if (response.status === 401) {
                 localStorage.removeItem('academy_token');
                 localStorage.removeItem('academy_user');
-                window.location.href = '/academy/login';
+                window.location.href = window.AppPath('/academy/login');
                 return null;
             }
             if (!response.ok) {
